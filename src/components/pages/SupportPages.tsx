@@ -50,9 +50,10 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
         type: 'matched'
       });
       alert(`Assignment Broadcasted: ${helperName} is now the primary pathfinder for this signal.`);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Selection signal failed. Project may be offline.");
+      const msg = e.message || "Unknown error";
+      alert(`Selection signal failed: ${msg}\n\nTip: Ensure you have run the ALTER TABLE SQL command in Supabase.`);
     } finally {
       setIsProcessing(false);
     }
