@@ -38,6 +38,26 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
     }
   };
 
+  const handleSelect = async (helperId: string, helperName: string) => {
+    if (!user || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await dbService.selectHelper(req.id, helperId);
+      await dbService.createNotification({
+        userId: helperId,
+        title: 'Mission Assigned!',
+        message: `You have been selected by ${user.name} for the signal: "${req.title}". Start collaborating now!`,
+        type: 'matched'
+      });
+      alert(`Assignment Broadcasted: ${helperName} is now the primary pathfinder for this signal.`);
+    } catch (e) {
+      console.error(e);
+      alert("Selection signal failed. Project may be offline.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleSolve = async () => {
     if (!user || isProcessing) return;
     setIsProcessing(true);
@@ -66,6 +86,7 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
 
   const isAuthor = Boolean(user?.id && req.authorId && user.id === req.authorId);
   const alreadyHelping = Boolean(user?.id && req.helperIds?.includes(user.id));
+  const isSelected = Boolean(user?.id && req.selectedHelperId === user.id);
 
   return (
     <div className="max-w-[1024px] mx-auto px-10 py-12">
@@ -120,9 +141,10 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
                 <button 
                   onClick={handleHelp}
                   disabled={alreadyHelping || isProcessing}
-                  className="w-full bg-brand-teal text-white py-4 rounded-button font-bold text-base shadow-lg shadow-brand-teal/20 hover:opacity-90 transition-all disabled:opacity-50"
+                  className="w-full bg-brand-teal text-white py-4 rounded-button font-bold text-base shadow-lg shadow-brand-teal/20 hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {alreadyHelping ? 'Help Request Pending' : 'I can help'}
+                  {isSelected ? <CheckCircle2 size={18} /> : null}
+                  {isSelected ? 'Mission Assigned to You' : (alreadyHelping ? 'Help Request Pending' : 'I can help')}
                 </button>
               )}
               {req.status !== 'Solved' && isAuthor && (
@@ -148,18 +170,35 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
             <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-6">Community Helpers</h4>
             <div className="space-y-6">
               {users.filter((u: User) => req.helperIds?.includes(u.id)).length > 0 ? (
-                users.filter((u: User) => req.helperIds?.includes(u.id)).map((user: User) => (
-                  <div key={user.id} className="flex items-center gap-4 group cursor-pointer">
-                    <div className="relative">
-                      <img src={user.avatar} className="w-10 h-10 rounded-xl shadow-sm group-hover:scale-105 transition-all" referrerPolicy="no-referrer" />
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-brand-teal rounded-full border-2 border-white flex items-center justify-center">
-                          <CheckCircle2 size={8} className="text-white" />
-                      </div>
+                users.filter((u: User) => req.helperIds?.includes(u.id)).map((candidate: User) => (
+                  <div key={candidate.id} className="flex flex-col gap-3 p-4 bg-brand-cream/30 rounded-2xl border border-black/5 group">
+                    <div className="flex items-center gap-4 group cursor-pointer">
+                        <div className="relative">
+                        <img src={candidate.avatar} className="w-10 h-10 rounded-xl shadow-sm group-hover:scale-105 transition-all" referrerPolicy="no-referrer" />
+                        {(req.selectedHelperId === candidate.id) && (
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-brand-teal rounded-full border-2 border-white flex items-center justify-center">
+                                <CheckCircle2 size={8} className="text-white" />
+                            </div>
+                        )}
+                        </div>
+                        <div className="flex-1">
+                        <p className="font-bold text-brand-slate text-sm group-hover:text-brand-teal transition-colors">{candidate.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trust {candidate.trustScore}%</p>
+                        </div>
+                        {req.selectedHelperId === candidate.id && (
+                             <span className="px-2 py-0.5 bg-brand-teal text-white text-[8px] font-black uppercase rounded-md tracking-widest">Active</span>
+                        )}
                     </div>
-                    <div>
-                      <p className="font-bold text-brand-slate text-sm group-hover:text-brand-teal transition-colors">{user.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trust {user.trustScore}%</p>
-                    </div>
+                    
+                    {isAuthor && req.status !== 'Solved' && !req.selectedHelperId && (
+                        <button 
+                            onClick={() => handleSelect(candidate.id, candidate.name)}
+                            disabled={isProcessing}
+                            className="w-full py-2 bg-brand-slate text-white text-[10px] font-bold uppercase tracking-widest rounded-lg hover:bg-brand-teal transition-all"
+                        >
+                            Select Pathfinder
+                        </button>
+                    )}
                   </div>
                 ))
               ) : (

@@ -36,6 +36,7 @@ export interface Request {
   aiSummary: string;
   aiTags: string[];
   helperIds?: string[];
+  selectedHelperId?: string;
 }
 
 export interface Message {

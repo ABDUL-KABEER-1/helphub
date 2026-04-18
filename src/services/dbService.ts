@@ -151,6 +151,13 @@ export const dbService = {
     });
   },
 
+  async selectHelper(requestId: string, helperId: string) {
+    await this.updateRequest(requestId, { 
+      selectedHelperId: helperId,
+      status: 'Processing' 
+    });
+  },
+
   async markAsSolved(requestId: string) {
     await this.updateRequest(requestId, { status: 'Solved' });
   },
