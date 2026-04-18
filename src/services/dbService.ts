@@ -154,8 +154,10 @@ export const dbService = {
   async selectHelper(requestId: string, helperId: string) {
     await this.updateRequest(requestId, { 
       selectedHelperId: helperId,
-      status: 'Processing' 
+      status: 'Solved' 
     });
+    // Automatically reward the selected pathfinder
+    await this.incrementUserContribution(helperId);
   },
 
   async markAsSolved(requestId: string) {
