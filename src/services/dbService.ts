@@ -144,7 +144,7 @@ export const dbService = {
 
   // --- Interactions ---
   async volunteerForRequest(requestId: string, userId: string, helperIds: string[] = []) {
-    const newHelpers = [...new Set([...helperIds, userId])];
+    const newHelpers = [...new Set([...(helperIds || []), userId])];
     await this.updateRequest(requestId, { 
       helperIds: newHelpers,
       status: 'Processing' 

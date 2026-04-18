@@ -30,6 +30,7 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
         message: `${user.name} has volunteered to help with your signal: "${req.title}"`,
         type: 'matched'
       });
+      alert("Succesfully joined as a pathfinder for this signal!");
     } catch (e) {
       console.error(e);
     } finally {
@@ -78,7 +79,7 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
         </div>
         <h1 className="text-4xl font-bold text-brand-slate leading-tight max-w-4xl tracking-tight mb-2">{req.title}</h1>
         <p className="text-slate-500 font-medium text-sm">
-            Posted in {req.location} • {req.createdAt ? new Date(req.createdAt?.toDate ? req.createdAt.toDate() : req.createdAt).toLocaleDateString() : 'Just now'}
+            Posted in {req.location} • {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Just now'}
         </p>
       </div>
 
@@ -121,7 +122,7 @@ export const RequestDetailPage = ({ requests, selectedRequestId, users }: any) =
                   disabled={alreadyHelping || isProcessing}
                   className="w-full bg-brand-teal text-white py-4 rounded-button font-bold text-base shadow-lg shadow-brand-teal/20 hover:opacity-90 transition-all disabled:opacity-50"
                 >
-                  {alreadyHelping ? 'Joined as helper' : 'I can help'}
+                  {alreadyHelping ? 'Help Request Pending' : 'I can help'}
                 </button>
               )}
               {req.status !== 'Solved' && isAuthor && (
