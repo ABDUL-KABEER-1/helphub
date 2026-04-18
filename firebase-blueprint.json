@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with community reputation and identity",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Auth UID" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" },
+        "location": { "type": "string" },
+        "trustScore": { "type": "integer" },
+        "role": { "type": "string", "enum": ["Helper", "Seeker", "Admin"] },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "interests": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "Request": {
+      "title": "Help Request",
+      "description": "Community request for help or guidance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string", "description": "Reference to User UID" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "urgency": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "status": { "type": "string", "enum": ["Open", "Processing", "Solved", "Archived"] },
+        "aiSummary": { "type": "string" },
+        "aiTags": { "type": "array", "items": { "type": "string" } },
+        "location": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "title", "description", "category"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Direct transmission between users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "channelId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "text"]
+    },
+    "Notification": {
+      "title": "Signal",
+      "description": "System notification or community signal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["Request", "Match", "Solved", "Action"] },
+        "read": { "type": "boolean" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "Global user directory"
+    },
+    "/requests/{requestId}": {
+      "schema": "Request",
+      "description": "Public help requests feed"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Message log"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Personal alerts and signals"
+    }
+  }
+}

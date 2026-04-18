@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isVerified() { return request.auth.token.email_verified == true; }
+    
+    // --- Validation Blueprints ---
+    
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email']) &&
+             data.uid is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 100 &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+             (!('trustScore' in data) || (data.trustScore is int)) &&
+             (!('role' in data) || (data.role is string)) &&
+             (!('skills' in data) || (data.skills is list && data.skills.size() <= 50)) &&
+             (!('interests' in data) || (data.interests is list && data.interests.size() <= 50)) &&
+             (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 512));
+    }
+
+    function isValidRequest(data) {
+      return data.keys().hasAll(['authorId', 'title', 'description', 'category']) &&
+             data.authorId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 5000 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 50 &&
+             (!('urgency' in data) || (data.urgency in ['Low', 'Medium', 'High', 'Critical'])) &&
+             (!('status' in data) || (data.status in ['Open', 'Processing', 'Solved', 'Archived'])) &&
+             (!('aiSummary' in data) || (data.aiSummary is string && data.aiSummary.size() <= 2000)) &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp));
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['senderId', 'text']) &&
+             data.senderId == request.auth.uid &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2000;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'title', 'message']) &&
+             data.userId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 128 &&
+             data.message is string && data.message.size() > 0 && data.message.size() <= 1024;
+    }
+
+    // --- Collection Matches ---
+
+    match /users/{userId} {
+      allow get: if true; // Public community profiles
+      allow list: if true; // Public leaderboard
+      allow create: if isOwner(userId) && isVerified() && isValidUser(incoming()) && 
+                    incoming().trustScore == 0;
+      allow update: if (
+        // Action 1: Owner updates profile
+        isOwner(userId) && (
+          // Case A: Standard edit
+          (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'location', 'skills', 'interests', 'avatar']) &&
+           incoming().trustScore == existing().trustScore &&
+           incoming().role == existing().role) ||
+          // Case B: Onboarding Completion (One-time setup)
+          (existing().trustScore == 0 && incoming().trustScore == 10 &&
+           incoming().diff(existing()).affectedKeys().hasOnly(['name', 'location', 'skills', 'interests', 'role', 'trustScore', 'avatar', 'contributions', 'badges']))
+        )
+      ) || (
+        // Action 2: Help Reward (Requester rewards helper)
+        isSignedIn() && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['trustScore', 'contributions']) &&
+        incoming().trustScore == (existing().get('trustScore', 0) + 10) &&
+        incoming().contributions == (existing().get('contributions', 0) + 1)
+      );
+    }
+
+    match /requests/{requestId} {
+      allow read: if true; // Publicly browse help signals
+      allow create: if isSignedIn() && isVerified() && isValidId(requestId) && isValidRequest(incoming()) &&
+                    incoming().status == 'Open';
+      allow update: if isSignedIn() && (
+        // Action 1: Author action (edit content, manage helpers, solve)
+        (isOwner(existing().authorId) && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'urgency', 'location', 'status', 'helperIds'])) ||
+        // Action 2: Participant action (volunteer)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['helperIds', 'status']) &&
+         existing().status == 'Open' &&
+         incoming().helperIds.size() > existing().get('helperIds', []).size()) ||
+        // Action 3: Intelligence Sync (Automated AI updates)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['aiSummary', 'aiTags', 'status']) &&
+         existing().status != 'Solved')
+      );
+      allow delete: if isOwner(existing().authorId) && existing().status == 'Open';
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn(); 
+      allow create: if isSignedIn() && isVerified() && isValidId(messageId) && isValidMessage(incoming());
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isVerified() && isValidNotification(incoming());
+      allow update: if isOwner(resource.data.userId) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isOwner(resource.data.userId);
+    }
+  }
+}
