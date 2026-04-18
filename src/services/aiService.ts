@@ -5,7 +5,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const geminiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
 
 // Graceful fallback for missing AI key
 const ai = geminiKey 
