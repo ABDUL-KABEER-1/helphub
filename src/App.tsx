@@ -26,6 +26,7 @@ import { HomePage } from './components/pages/HomePage';
 import { CreateRequestPage, RequestDetailPage } from './components/pages/SupportPages';
 import { LeaderboardPage, NotificationsPage, AICenterPage, MessagesPage } from './components/pages/SocialPages';
 import { ProfilePage } from './components/pages/ProfilePage';
+import { SettingsPage } from './components/pages/SettingsPage';
 import { Chatbot } from './components/Chatbot';
 
 // --- Global Components ---
@@ -141,6 +142,29 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, [isSupabaseConfigured]);
 
+  // Navigation Logic (Auth Wall & Redirection)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    // Handle logout redirect
+    if (!user) {
+      if (activePage !== 'login' && activePage !== 'settings') {
+        setActivePage('login');
+      }
+      return;
+    }
+
+    // Handle login redirect
+    if (activePage === 'login') {
+       // New user detection
+       if (!user.location || user.location === 'Not set') {
+         setActivePage('onboarding');
+       } else {
+         setActivePage('home');
+       }
+    }
+  }, [user, activePage, isSupabaseConfigured]);
+
   async function handleAuthState(sbUser: any) {
     if (sbUser) {
       let profile = await dbService.getProfile(sbUser.id);
@@ -191,8 +215,8 @@ export default function App() {
   }, [setRequests, user, setNotifications, isSupabaseConfigured]);
 
   const renderPage = () => {
-    // Protected routes
-    if (!user && (activePage === 'profile' || activePage === 'create-request' || activePage === 'messages')) {
+    // Auth Wall: Protect all pages for logged out users
+    if (!user && activePage !== 'settings') {
         return <LoginPage />;
     }
 
@@ -208,6 +232,7 @@ export default function App() {
       case 'request-detail': return <RequestDetailPage requests={requests} selectedRequestId={selectedRequestId} users={leaderboardUsers} />;
       case 'notifications': return <NotificationsPage notifications={notifications} />;
       case 'messages': return <MessagesPage users={leaderboardUsers} />;
+      case 'settings': return <SettingsPage />;
       default: return <HomePage requests={requests} setSelectedRequestId={setSelectedRequestId} setActivePage={setActivePage} />;
     }
   };
@@ -222,8 +247,11 @@ export default function App() {
       />
 
       {!isSupabaseConfigured && (
-        <div className="bg-brand-teal text-white px-10 py-3 text-center text-xs font-bold uppercase tracking-widest shadow-xl sticky top-[64px] z-40 animate-pulse">
-          Connection Node Offline: Please configure Supabase URL and Key in Settings to enable real-time signals.
+        <div 
+          onClick={() => setActivePage('settings')}
+          className="bg-brand-teal text-white px-10 py-3 text-center text-xs font-bold uppercase tracking-widest shadow-xl sticky top-[64px] z-40 animate-pulse cursor-pointer hover:bg-brand-slate transition-colors"
+        >
+          Connection Node Offline: Please configure Supabase URL and Key in Settings to enable real-time signals. <u>Click to configure.</u>
         </div>
       )}
       
