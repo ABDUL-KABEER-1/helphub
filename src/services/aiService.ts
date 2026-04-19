@@ -5,19 +5,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const geminiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
-
-// Graceful fallback for missing AI key
-const ai = geminiKey 
-  ? new GoogleGenAI({ apiKey: geminiKey })
-  : {
-      models: {
-        generateContent: () => Promise.resolve({ text: "{}" })
-      },
-      chats: {
-        create: () => ({ sendMessage: () => Promise.resolve({ text: "Intelligence node offline. Please configure VITE_GEMINI_API_KEY." }) })
-      }
-    } as any;
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
 export interface AISignalResponse {
   summary: string;

@@ -39,7 +39,7 @@ export const useStore = create<AppState>((set) => ({
   activeRequest: null,
   notifications: [],
   messages: [],
-  activePage: 'login',
+  activePage: 'home',
   isLoading: false,
 
   // Actions

@@ -144,20 +144,11 @@ export const dbService = {
 
   // --- Interactions ---
   async volunteerForRequest(requestId: string, userId: string, helperIds: string[] = []) {
-    const newHelpers = [...new Set([...(helperIds || []), userId])];
+    const newHelpers = [...new Set([...helperIds, userId])];
     await this.updateRequest(requestId, { 
       helperIds: newHelpers,
       status: 'Processing' 
     });
-  },
-
-  async selectHelper(requestId: string, helperId: string) {
-    await this.updateRequest(requestId, { 
-      selectedHelperId: helperId,
-      status: 'Solved' 
-    });
-    // Automatically reward the selected pathfinder
-    await this.incrementUserContribution(helperId);
   },
 
   async markAsSolved(requestId: string) {
